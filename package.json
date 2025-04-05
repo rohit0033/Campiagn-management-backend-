@@ -2,13 +2,12 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "start": "node dist/app.js",
-    "dev": "nodemon src/app.ts",
-    "build": "tsc",
-    "lint": "eslint . --ext .ts",
-    "test": "jest"
-  },
+"scripts": {
+  "build": "tsc",
+  "start": "node dist/app.js",
+  "dev": "nodemon src/app.ts",
+  "postinstall": "npm run build"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
