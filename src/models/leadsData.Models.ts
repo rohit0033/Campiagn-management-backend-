@@ -43,5 +43,21 @@ leadDataSchema.statics.findForCampaign = async function(campaignId: string | mon
   // Find lead data for the campaign's URLs
   return await this.find({ linkedInUrl: { $in: campaign.leads } });
 };
+leadDataSchema.virtual('id').get(function() {
+  const id = this._id;
+  return id ? id.toString() : null;
+});
+
+leadDataSchema.set('toJSON', { 
+  virtuals: true,
+  transform: (doc, ret) => {
+    if (ret._id) {
+      ret.id = ret._id.toString();
+    }
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
 
 export default mongoose.model<ILeadData>('LeadData', leadDataSchema);
