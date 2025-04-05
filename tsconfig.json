@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2017", // Or a higher version like ES2018, ES2019, etc.
+    "module": "CommonJS", // Or "ESNext" depending on your module system
+    "outDir": "./dist", // Output directory for compiled JavaScript files
+    "rootDir": "./", // Root directory of your TypeScript source files
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    // ... other compiler options
+  },
+  "include": ["./**/*"], // Include all TypeScript files in your project
+  "exclude": ["node_modules"]
+}
