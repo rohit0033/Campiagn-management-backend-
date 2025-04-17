@@ -6,6 +6,7 @@ import { generatePersonalizedMessage } from "../services/ai-message.service";
 import { scrapeLinkedInProfile2 } from "../services/linkedin-scrapper2";
 import { scrapeLinkedInProfileViaAPI } from "../services/linkedin-api-scrappper";
 import LeadData from "../models/leadsData.Models"
+import { sendLinkedInMessage } from "../services/linkedin-messaging.service";
 // Generate a personalized message based on manually provided LinkedIn profile data
 // Helper function to save profile data to LeadsData collection
 export interface ProfileData {
@@ -257,3 +258,44 @@ export const generateMessageFromProfileUrlAPI = async (
       });
     }
   };
+
+  export const sendMessageToProfile = async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
+    const logSection = "sendMessageToProfileController";
+    try {
+      const { profileUrl, sessionCookie, message } = req.body;
+  
+      // Validation
+      if (!profileUrl || !profileUrl.includes("linkedin.com/in/")) {
+        res.status(400).json({ message: "Valid LinkedIn profile URL (profileUrl) is required." });
+        return;
+      }
+      if (!message) {
+        res.status(400).json({ message: "Message content (message) is required." });
+        return;
+      }
+      const cookieToUse = sessionCookie || process.env.SESSION_COOKIE || "AQEDAUoaEmMATyq7AAABlgVIQYAAAAGWKVTFgE0AMiLcZZ4h6vwFzIpSvKZ8gKOMXsiHesw_Zsm-ynSp2vpsmlRO2sjE8Ko6KcOBx_UZSvtbAkW2WJyRQHQSvmRp-iLQZfu50dRtMRDPJfda2iX9CUCZ"; // Consider removing default hardcoded cookie
+
+    if (!cookieToUse) {
+      res.status(400).json({ message: "LinkedIn session cookie (sessionCookie or SESSION_COOKIE env var) is required." });
+      return;
+    }
+
+    console.log(`[${logSection}] Initiating message send to: ${profileUrl}`);
+
+    // Call the service function
+    await sendLinkedInMessage(profileUrl, cookieToUse, message);
+
+    console.log(`[${logSection}] Message sending process initiated successfully for ${profileUrl}.`);
+    res.status(200).json({ message: "Message sending process initiated successfully." });
+
+  } catch (error: any) {
+    console.error(`[${logSection}] Error sending LinkedIn message:`, error);
+    res.status(500).json({
+      message: "Failed to send LinkedIn message.",
+      error: error.message // Provide error details
+    });
+  }
+};

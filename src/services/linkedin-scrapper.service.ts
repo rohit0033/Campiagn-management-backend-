@@ -33,7 +33,7 @@ function delay(min: number, max: number): Promise<void> {
     });
 }
 
-const statusLog = (section: string, message: string, sessionId: string = ""): void => {
+export const statusLog = (section: string, message: string, sessionId: string = ""): void => {
     console.log(`[${new Date().toISOString()}] [${section}]${sessionId ? ` [${sessionId}]` : ""}: ${message}`);
 };
 

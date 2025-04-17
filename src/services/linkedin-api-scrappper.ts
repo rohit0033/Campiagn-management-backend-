@@ -2,25 +2,26 @@
 // Assuming these imports and helpers are available in the scope
 // You might need to adjust paths based on your project structure.
 import axios, { AxiosInstance } from 'axios';
+import { getLinkedInCsrfInfo, getUserAgent } from '../helper/linkedin.auth.helper'; 
 import { CookieJar } from 'tough-cookie';
-const userAgents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/123.0.0.0 Safari/537.36"
-  ];
+// const userAgents = [
+//     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+//     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+//     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+//     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+//     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+//     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+//     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0",
+//     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/123.0.0.0 Safari/537.36"
+//   ];
 
-// Assuming userAgents.ts/js exists
-// import { createAxiosClient } from './helpers'; // Or incorporate its logic
-export const getUserAgent = () => {
-    const index = Math.floor(Math.random() * userAgents.length);
-    const userAgent = userAgents[index];
-    return userAgent;
-  };
+// // Assuming userAgents.ts/js exists
+// // import { createAxiosClient } from './helpers'; // Or incorporate its logic
+// export const getUserAgent = () => {
+//     const index = Math.floor(Math.random() * userAgents.length);
+//     const userAgent = userAgents[index];
+//     return userAgent;
+//   };
 // Define the ProfileData interface based on your expected output
 interface ProfileData {
   name: string | null;
@@ -50,23 +51,11 @@ const extractLinkedInUsername = (url: string): string | null => {
 
 /**
  * Extracts the CSRF token from cookies (specifically JSESSIONID).
- * @param {string[]} cookies - An array of cookie strings from 'set-cookie' header.
+ * - An array of cookie strings from 'set-cookie' header.
  * @returns {string} The CSRF token.
  * @throws {Error} If JSESSIONID cookie is not found.
  */
-const getCSRFToken = (cookies: string[] | undefined): string => {
-  if (!cookies) {
-    throw new Error("No 'set-cookie' header found in response.");
-  }
-  const jsessionCookie = cookies.find((cookie) =>
-    cookie.startsWith("JSESSIONID=")
-  );
-  if (!jsessionCookie) {
-    throw new Error("JSESSIONID cookie not found in response.");
-  }
-  // Extract the value part, remove quotes
-  return jsessionCookie.split(";")[0].replace("JSESSIONID=", "").replace(/"/g, "");
-};
+
 
 
 export async function scrapeLinkedInProfileViaAPI(
@@ -83,55 +72,25 @@ export async function scrapeLinkedInProfileViaAPI(
   }
 
   const userAgent = getUserAgent();
-  const AUTH_BASE_URL = "https://www.linkedin.com";
+//   const AUTH_BASE_URL = "https://www.linkedin.com";
 
   try {
-    // --- Step 1: Initial request to get CSRF token ---
-    // We need this token to make authenticated Voyager API calls.
-    const initialJar = new CookieJar();
-    const initialClient = axios.create({
-      headers: {
-        'User-Agent': userAgent,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        // Add other headers that LinkedIn might expect for a browser visit
-      },
-      withCredentials: true, // Important for Axios to handle cookies with the jar
-      // @ts-ignore - Axios types might not perfectly match tough-cookie jar integration
-      jar: initialJar,
-    });
+    console.log(`Scraping profile for ${username} using User-Agent: ${userAgent}`);
+    // Pass the generated userAgent to the helper
+    const { csrfTokenValue, jsessionIdCookieString } = await getLinkedInCsrfInfo(userAgent);
+    console.log(`Obtained CSRF token: ${csrfTokenValue}, JSESSIONID string: ${jsessionIdCookieString}`);
 
-    // Make a request to a page that sets the JSESSIONID cookie
-    const authResponse = await initialClient.get(
-       `${AUTH_BASE_URL}/feed/`, // A common page like the feed often works
-       {
-            maxRedirects: 5, // Allow redirects
-            // Add timeout if needed
-       }
-    );
-
-
-    // Extract CSRF token from the cookies set in the response
-    const csrfToken = getCSRFToken(authResponse.headers['set-cookie']);
-
-    const jsessionIdCookie = await initialJar.getCookieString(AUTH_BASE_URL); // Get cookies for the domain
-    // Find the specific JSESSIONID value if multiple cookies exist
-     const jsessionIdValue = jsessionIdCookie.split(';').find(c => c.trim().startsWith('JSESSIONID=')) || `JSESSIONID="${csrfToken}"`;
-
-
-    const finalCookieHeader = `li_at=${sessionCookie}; ${jsessionIdValue}`; // Combine li_at and JSESSIONID
-
+    // --- Step 2: Prepare headers for the main API call ---
+    const finalCookieHeader = `li_at=${sessionCookie}; ${jsessionIdCookieString}`;
 
     const finalHeaders = {
-      'User-Agent': userAgent,
-      'Accept': 'application/vnd.linkedin.normalized+json+2.1', // Specific accept header for Voyager API
-      'X-Restli-Protocol-Version': '2.0.0', // As used in your original code
-      'csrf-token': csrfToken,
+      'User-Agent': userAgent, // Use the same userAgent for consistency
+      'Accept': 'application/vnd.linkedin.normalized+json+2.1',
+      'X-Restli-Protocol-Version': '2.0.0',
+      'csrf-token': csrfTokenValue,
       'Cookie': finalCookieHeader,
-      // Add other potential headers if needed, e.g., 'x-li-lang', 'x-li-track'
     };
 
-    // Use a standard Axios instance with these headers for the API call
-    // No jar needed here as we are manually setting the Cookie header
     const finalClient = axios.create({ headers: finalHeaders });
 
     // --- Step 3: Make the API request to get profile data ---
