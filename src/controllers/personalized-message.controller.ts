@@ -266,6 +266,8 @@ export const generateMessageFromProfileUrlAPI = async (
     const logSection = "sendMessageToProfileController";
     try {
       const { profileUrl, sessionCookie, message } = req.body;
+      console.log(`[${logSection}] Received request to send message to: ${profileUrl}`);
+      console.log(`[${logSection}] Session cookie: ${sessionCookie}`);
   
       // Validation
       if (!profileUrl || !profileUrl.includes("linkedin.com/in/")) {
